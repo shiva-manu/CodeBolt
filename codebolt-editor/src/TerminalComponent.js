@@ -1,42 +1,46 @@
 import React from 'react';
-import { XTerm } from 'xterm-for-react';
+import { ReactTerminal, TerminalContextProvider } from 'react-terminal';
 
 function TerminalComponent() {
-  // You can implement shell logic here.
-  // For now, it's a simple echo terminal.
-  const onData = (data) => {
-    // Echo back the input
-    // In a real terminal, you would send this to a shell process
-    xtermRef.current.terminal.write(data);
-    if (data.charCodeAt(0) === 13) { // Enter key
-        xtermRef.current.terminal.write('\r\n$ ');
-    } else if (data.charCodeAt(0) === 127) { // Backspace
-        // Handle backspace: move cursor back, erase char, move cursor back again
-        xtermRef.current.terminal.write('\b \b');
-    }
+  // Define commands here or pass them in as props if you want more dynamic commands
+  const commands = {
+    whoami: 'codebolt_user',
+    help: () => (
+      <span>
+        <strong>Available commands:</strong>
+        <br />
+        help - Show this help message
+        <br />
+        whoami - Display the current user
+        <br />
+        date - Display the current date
+        <br />
+        clear - Clear the terminal
+      </span>
+    ),
+    date: () => new Date().toString(),
+    // 'clear' is often an built-in command, but we can also define it
+    // clear: provided by default by react-terminal
   };
 
-  const xtermRef = React.useRef(null);
-
-  React.useEffect(() => {
-    if (xtermRef.current) {
-      xtermRef.current.terminal.writeln('Welcome to CodeBolt Terminal!');
-      xtermRef.current.terminal.write('$ ');
-    }
-  }, []);
+  const welcomeMessage = (
+    <span>
+      Welcome to the CodeBolt Terminal! Type 'help' to see available commands.
+      <br />
+    </span>
+  );
 
   return (
-    <XTerm
-      ref={xtermRef}
-      onData={onData}
-      options={{
-        cursorBlink: true,
-        theme: {
-          background: '#1e1e1e',
-          foreground: '#d4d4d4',
-        }
-      }}
-    />
+    <div style={{ height: '100%', width: '100%' }}>
+      <ReactTerminal
+        commands={commands}
+        welcomeMessage={welcomeMessage}
+        prompt="$"
+        theme="dracula" // Or any other theme like "light", "dark", "material-dark" etc.
+        showControlBar={false} // Depending on preference
+        errorMessage="Command not found!"
+      />
+    </div>
   );
 }
 
