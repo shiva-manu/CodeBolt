@@ -1,0 +1,123 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @db.Uuid
+  username  String?  @unique
+  avatarUrl String?
+  createdAt DateTime @default(now())
+
+  projects    Project[]
+  memberships ProjectMember[]
+  prompts     AIPrompt[]
+}
+
+model Project {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+  isPublic    Boolean @default(false)
+
+  ownerId String @db.Uuid
+  owner   User   @relation(fields: [ownerId], references: [id])
+
+  files    File[]
+  versions CodeVersion[]
+  members  ProjectMember[]
+  prompts  AIPrompt[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ProjectMember {
+  id String @id @default(uuid())
+
+  projectId String
+  userId    String @db.Uuid
+
+  role ProjectRole @default(VIEWER)
+
+  project Project @relation(fields: [projectId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  joinedAt DateTime @default(now())
+
+  @@unique([projectId, userId])
+}
+
+enum ProjectRole {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+model File {
+  id        String  @id @default(uuid())
+  projectId String
+  parentId  String?
+
+  name     String
+  content  String @db.Text
+  language String // js, ts, py, rust, etc
+
+  project  Project @relation(fields: [projectId], references: [id])
+  parent   File?   @relation("FileTree", fields: [parentId], references: [id])
+  children File[]  @relation("FileTree")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CodeVersion {
+  id        String @id @default(uuid())
+  projectId String
+
+  message  String?
+  snapshot Json // entire file tree snapshot
+
+  project Project @relation(fields: [projectId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model AIPrompt {
+  id String @id @default(uuid())
+
+  userId    String  @db.Uuid
+  projectId String?
+
+  prompt   String @db.Text
+  response String @db.Text
+  model    String // gpt-4, deepseek, llama, etc
+
+  user    User     @relation(fields: [userId], references: [id])
+  project Project? @relation(fields: [projectId], references: [id])
+
+  tokensUsed Int?
+  latencyMs  Int?
+
+  createdAt DateTime @default(now())
+}
+
+model ActivityLog {
+  id        String  @id @default(uuid())
+  userId    String  @db.Uuid
+  projectId String?
+
+  action   String // "edited_file", "ran_code", "used_ai"
+  metadata Json?
+
+  createdAt DateTime @default(now())
+}
